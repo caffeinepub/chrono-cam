@@ -42,6 +42,7 @@ import { toast } from "sonner";
 import { Variant_ratio1_1_ratio4_3_ratio16_9 } from "../backend";
 import FeedbackSection from "../components/FeedbackSection";
 import {
+  type AISubject,
   DEFAULT_SETTINGS,
   RESOLUTION_MAP,
   type UISettings,
@@ -86,8 +87,6 @@ const AI_SUBJECTS = [
   { value: "background", label: "Background" },
   { value: "landscape", label: "Landscape" },
 ] as const;
-
-type AISubject = (typeof AI_SUBJECTS)[number]["value"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -375,8 +374,16 @@ function ModeBtn({
 export default function SettingsTab() {
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
-  const { settings, setSettings, hardwareMaxZoom, setHardwareMaxZoom } =
-    useCameraSettings();
+  const {
+    settings,
+    setSettings,
+    hardwareMaxZoom,
+    setHardwareMaxZoom,
+    aiAutoFocus,
+    setAiAutoFocus,
+    aiSubject,
+    setAiSubject,
+  } = useCameraSettings();
 
   const { data: savedSettings } = useGetUserSettings();
   const { mutateAsync: saveSettings, isPending: isSaving } =
@@ -407,10 +414,6 @@ export default function SettingsTab() {
   // Zoom text input state
   const [zoomInputValue, setZoomInputValue] = useState("");
   const [zoomInputFocused, setZoomInputFocused] = useState(false);
-
-  // AI Auto-focus state
-  const [aiAutoFocus, setAiAutoFocus] = useState(false);
-  const [aiSubject, setAiSubject] = useState<AISubject>("sky");
 
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);

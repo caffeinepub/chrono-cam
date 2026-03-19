@@ -75,6 +75,9 @@ export default function CaptureTab() {
   const [durationMode, setDurationMode] = useState<DurationMode>("minutes");
   const [storageLimitValue, setStorageLimitValue] = useState("");
   const [storageMode, setStorageMode] = useState<StorageMode>("space-consumed");
+  const [storagePermissionGranted, setStoragePermissionGranted] = useState<
+    boolean | null
+  >(null);
 
   const [isRunning, setIsRunning] = useState(false);
   const [isEncoding, setIsEncoding] = useState(false);
@@ -102,11 +105,37 @@ export default function CaptureTab() {
   const sessionBytesRef = useRef<number>(0);
   const isRunningRef = useRef(false);
 
+  const storageAvailable =
+    typeof navigator !== "undefined" && !!navigator.storage;
+
+  const refreshStorageInfo = useCallback(async () => {
+    if (!storageAvailable) return;
+    const est = await navigator.storage.estimate();
+    setStorageInfo({ quota: est.quota ?? 0, usage: est.usage ?? 0 });
+  }, [storageAvailable]);
+
   useEffect(() => {
-    navigator.storage?.estimate().then((est) => {
-      setStorageInfo({ quota: est.quota ?? 0, usage: est.usage ?? 0 });
-    });
-  }, []);
+    refreshStorageInfo();
+  }, [refreshStorageInfo]);
+
+  const handleSpaceLeftClick = useCallback(async () => {
+    setStorageMode("space-left");
+    if (!storageAvailable) return;
+    if (storagePermissionGranted === true) return;
+    try {
+      const granted = await navigator.storage.persist();
+      setStoragePermissionGranted(granted);
+      if (granted) {
+        toast.success("Storage access granted");
+        await refreshStorageInfo();
+      } else {
+        toast.warning("Storage permission denied – limit may be inaccurate");
+      }
+    } catch {
+      setStoragePermissionGranted(false);
+      toast.warning("Storage permission denied – limit may be inaccurate");
+    }
+  }, [storageAvailable, storagePermissionGranted, refreshStorageInfo]);
 
   const computeIntervalMs = useCallback((): number => {
     const v = Number.parseFloat(rateValue) || 1;
@@ -382,7 +411,7 @@ export default function CaptureTab() {
             return;
           }
         } else {
-          // space-left-after
+          // space-left
           const est = await navigator.storage?.estimate();
           const avail = (est?.quota ?? 0) - (est?.usage ?? 0);
           if (avail < limitBytes) {
@@ -526,7 +555,15 @@ export default function CaptureTab() {
                 optional
               </span>
             </div>
-            {storageInfo && (
+
+            {/* Storage availability notice */}
+            {!storageAvailable && (
+              <p className="text-xs text-amber-500 mb-2">
+                Storage info unavailable in this browser.
+              </p>
+            )}
+
+            {storageAvailable && storageInfo && (
               <p className="text-xs text-muted-foreground mb-2">
                 Available:{" "}
                 <span className="text-foreground font-mono">
@@ -534,6 +571,7 @@ export default function CaptureTab() {
                 </span>
               </p>
             )}
+
             <Input
               type="number"
               min="0"
@@ -554,12 +592,29 @@ export default function CaptureTab() {
               </ModeButton>
               <ModeButton
                 active={storageMode === "space-left"}
-                onClick={() => setStorageMode("space-left")}
+                onClick={handleSpaceLeftClick}
                 ocid="capture.storage_left.toggle"
               >
                 Space Left
               </ModeButton>
             </div>
+
+            {/* Permission status notices */}
+            {storageAvailable &&
+              storageMode === "space-left" &&
+              storagePermissionGranted === null && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Tap &ldquo;Space Left&rdquo; to request storage access
+                  permission.
+                </p>
+              )}
+            {storageAvailable &&
+              storageMode === "space-left" &&
+              storagePermissionGranted === false && (
+                <p className="text-xs text-amber-500 mt-2">
+                  Permission denied. Limit check may be inaccurate.
+                </p>
+              )}
           </div>
 
           {/* Run / Stop */}

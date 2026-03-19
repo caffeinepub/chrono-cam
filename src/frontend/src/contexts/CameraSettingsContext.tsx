@@ -5,6 +5,18 @@ import {
   Variant_ratio1_1_ratio4_3_ratio16_9,
 } from "../backend";
 
+export type AISubject =
+  | "sky"
+  | "sun"
+  | "moon"
+  | "stars"
+  | "horizon"
+  | "person-face"
+  | "clouds"
+  | "foreground"
+  | "background"
+  | "landscape";
+
 export interface UISettings {
   deviceId: string;
   resolution: number; // 0=HD 1=FHD 2=4K 3=8K
@@ -128,6 +140,10 @@ interface CameraSettingsContextValue {
   ) => void;
   hardwareMaxZoom: number;
   setHardwareMaxZoom: (v: number) => void;
+  aiAutoFocus: boolean;
+  setAiAutoFocus: (v: boolean) => void;
+  aiSubject: AISubject;
+  setAiSubject: (v: AISubject) => void;
 }
 
 const CameraSettingsContext = createContext<CameraSettingsContextValue | null>(
@@ -139,6 +155,8 @@ export function CameraSettingsProvider({
 }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<UISettings>(DEFAULT_SETTINGS);
   const [hardwareMaxZoom, setHardwareMaxZoom] = useState<number>(1);
+  const [aiAutoFocus, setAiAutoFocus] = useState<boolean>(false);
+  const [aiSubject, setAiSubject] = useState<AISubject>("sky");
 
   const updateSetting = useCallback(
     <K extends keyof UISettings>(key: K, value: UISettings[K]) => {
@@ -155,6 +173,10 @@ export function CameraSettingsProvider({
         updateSetting,
         hardwareMaxZoom,
         setHardwareMaxZoom,
+        aiAutoFocus,
+        setAiAutoFocus,
+        aiSubject,
+        setAiSubject,
       }}
     >
       {children}

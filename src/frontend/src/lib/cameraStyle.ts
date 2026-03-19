@@ -1,13 +1,30 @@
 import type { UISettings } from "../contexts/CameraSettingsContext";
 
-export function buildVideoStyle(settings: UISettings): React.CSSProperties {
+/**
+ * Build the CSS style for the video preview element.
+ *
+ * @param settings       Current UI settings
+ * @param hwZoomActive   True when hardware zoom is handling base zoom (don't apply CSS scale for it)
+ * @param turboScale     Extra CSS scale factor for turbo zoom (zoom beyond hardware max)
+ */
+export function buildVideoStyle(
+  settings: UISettings,
+  hwZoomActive = false,
+  turboScale = 1,
+): React.CSSProperties {
   const transforms: string[] = [];
   const filters: string[] = [];
 
   if (settings.flip) transforms.push("scaleY(-1)");
   if (settings.mirror) transforms.push("scaleX(-1)");
 
-  if (settings.zoom > 1) transforms.push(`scale(${settings.zoom})`);
+  if (hwZoomActive) {
+    // Hardware handles base zoom; only apply CSS scale for turbo
+    if (turboScale > 1) transforms.push(`scale(${turboScale.toFixed(3)})`);
+  } else {
+    // Legacy CSS-only zoom
+    if (settings.zoom > 1) transforms.push(`scale(${settings.zoom})`);
+  }
 
   const brightnessVal = 1 + settings.brightness / 100;
   if (Math.abs(brightnessVal - 1) > 0.01)

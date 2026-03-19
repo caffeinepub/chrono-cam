@@ -9,7 +9,7 @@ export interface UISettings {
   deviceId: string;
   resolution: number; // 0=HD 1=FHD 2=4K 3=8K
   aspectRatio: Variant_ratio1_1_ratio4_3_ratio16_9;
-  zoom: number; // 1-10
+  zoom: number; // 1-10 (or higher with turbo)
   focusValue: number; // 0-100
   wbMode: "auto" | "manual";
   colorTemp: number; // 2500-8000
@@ -25,6 +25,8 @@ export interface UISettings {
   flip: boolean;
   mirror: boolean;
   gridOverlay: boolean;
+  turboZoom: boolean;
+  autoSwitchCamera: boolean;
 }
 
 export const DEFAULT_SETTINGS: UISettings = {
@@ -47,6 +49,8 @@ export const DEFAULT_SETTINGS: UISettings = {
   flip: false,
   mirror: false,
   gridOverlay: false,
+  turboZoom: false,
+  autoSwitchCamera: true,
 };
 
 export function toUISettings(s: CameraSettings): UISettings {
@@ -70,6 +74,8 @@ export function toUISettings(s: CameraSettings): UISettings {
     flip: s.flip,
     mirror: s.mirror,
     gridOverlay: s.gridOverlay,
+    turboZoom: false,
+    autoSwitchCamera: true,
   };
 }
 
@@ -120,6 +126,8 @@ interface CameraSettingsContextValue {
     key: K,
     value: UISettings[K],
   ) => void;
+  hardwareMaxZoom: number;
+  setHardwareMaxZoom: (v: number) => void;
 }
 
 const CameraSettingsContext = createContext<CameraSettingsContextValue | null>(
@@ -130,6 +138,7 @@ export function CameraSettingsProvider({
   children,
 }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<UISettings>(DEFAULT_SETTINGS);
+  const [hardwareMaxZoom, setHardwareMaxZoom] = useState<number>(1);
 
   const updateSetting = useCallback(
     <K extends keyof UISettings>(key: K, value: UISettings[K]) => {
@@ -140,7 +149,13 @@ export function CameraSettingsProvider({
 
   return (
     <CameraSettingsContext.Provider
-      value={{ settings, setSettings, updateSetting }}
+      value={{
+        settings,
+        setSettings,
+        updateSetting,
+        hardwareMaxZoom,
+        setHardwareMaxZoom,
+      }}
     >
       {children}
     </CameraSettingsContext.Provider>

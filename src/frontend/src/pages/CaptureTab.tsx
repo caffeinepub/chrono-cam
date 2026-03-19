@@ -89,6 +89,9 @@ export default function CaptureTab() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cleanupCountdown, setCleanupCountdown] = useState<number | null>(null);
 
+  const [hwZoomActive, setHwZoomActive] = useState(false);
+  const [hwMaxZoom, setHwMaxZoom] = useState(10);
+
   const framesRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -127,6 +130,7 @@ export default function CaptureTab() {
     return v * 3600000;
   }, [durationValue, durationMode]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hwZoomActive and hwMaxZoom are refs-like runtime state
   const captureFrame = useCallback(async (): Promise<Blob | null> => {
     if (!videoRef.current || !captureCanvasRef.current) return null;
     const video = videoRef.current;
@@ -141,7 +145,17 @@ export default function CaptureTab() {
 
     ctx.save();
 
-    const zoom = settings.zoom > 1 ? settings.zoom : 1;
+    // For hardware zoom: hardware handles base zoom, we only crop by turboScale
+    // For CSS zoom: we crop by full zoom value
+    const effectiveCropZoom =
+      hwZoomActive && settings.turboZoom && settings.zoom > hwMaxZoom
+        ? settings.zoom / hwMaxZoom
+        : hwZoomActive
+          ? 1
+          : settings.zoom > 1
+            ? settings.zoom
+            : 1;
+    const zoom = effectiveCropZoom > 1 ? effectiveCropZoom : 1;
     const srcW = video.videoWidth / zoom;
     const srcH = video.videoHeight / zoom;
     const srcX = (video.videoWidth - srcW) / 2;
@@ -293,6 +307,28 @@ export default function CaptureTab() {
           videoRef.current.onloadedmetadata = () => resolve();
         });
         await videoRef.current.play().catch(() => {});
+      }
+
+      // Apply hardware zoom if supported
+      const track = stream.getVideoTracks()[0];
+      if (track) {
+        const caps = (track as any).getCapabilities?.() ?? {};
+        if (caps.zoom && settings.zoom > 1) {
+          const hwMax = Number(caps.zoom.max ?? 10);
+          const hwMin = Number(caps.zoom.min ?? 1);
+          setHwZoomActive(true);
+          setHwMaxZoom(hwMax);
+          const hwZoomVal = Math.min(Math.max(settings.zoom, hwMin), hwMax);
+          try {
+            await track.applyConstraints({
+              advanced: [{ zoom: hwZoomVal } as MediaTrackConstraintSet],
+            });
+          } catch {
+            /* unsupported */
+          }
+        } else {
+          setHwZoomActive(false);
+        }
       }
     } catch (e) {
       setCameraError(e instanceof Error ? e.message : "Camera access denied");
@@ -560,7 +596,15 @@ export default function CaptureTab() {
               ref={videoRef}
               className="w-full h-full object-cover"
               style={{
-                ...buildVideoStyle(settings),
+                ...buildVideoStyle(
+                  settings,
+                  hwZoomActive,
+                  hwZoomActive &&
+                    settings.turboZoom &&
+                    settings.zoom > hwMaxZoom
+                    ? settings.zoom / hwMaxZoom
+                    : 1,
+                ),
                 minHeight: 280,
                 maxHeight: 420,
                 display: "block",

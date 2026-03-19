@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "General Sans";
+  src: url("/assets/fonts/GeneralSans.woff2") format("woff2");
+  font-weight: 200 700;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    /* Dark-only theme matching design: #0E1216 bg */
+    --background: 0.136 0.012 244;
+    --foreground: 0.927 0.011 244;
+    --card: 0.215 0.018 244;
+    --card-foreground: 0.927 0.011 244;
+    --popover: 0.215 0.018 244;
+    --popover-foreground: 0.927 0.011 244;
+    /* primary = green #2FBE86 */
+    --primary: 0.713 0.143 159;
+    --primary-foreground: 0.136 0.012 244;
+    /* secondary = dark slate border-ish */
+    --secondary: 0.275 0.022 244;
+    --secondary-foreground: 0.927 0.011 244;
+    --muted: 0.215 0.018 244;
+    --muted-foreground: 0.728 0.019 244;
+    /* accent = teal #2FD0C3 */
+    --accent: 0.779 0.133 184;
+    --accent-foreground: 0.136 0.012 244;
+    /* destructive = muted red #A04A4A */
+    --destructive: 0.469 0.101 22;
+    --destructive-foreground: 0.927 0.011 244;
+    --border: 0.275 0.022 244;
+    /* input deep gray #12171D */
+    --input: 0.147 0.013 244;
+    --ring: 0.779 0.133 184;
+    --chart-1: 0.713 0.143 159;
+    --chart-2: 0.779 0.133 184;
+    --chart-3: 0.557 0.172 22;
+    --chart-4: 0.728 0.019 244;
+    --chart-5: 0.469 0.101 22;
+    --sidebar: 0.172 0.015 244;
+    --sidebar-foreground: 0.927 0.011 244;
+    --sidebar-primary: 0.779 0.133 184;
+    --sidebar-primary-foreground: 0.136 0.012 244;
+    --sidebar-accent: 0.215 0.018 244;
+    --sidebar-accent-foreground: 0.927 0.011 244;
+    --sidebar-border: 0.275 0.022 244;
+    --sidebar-ring: 0.779 0.133 184;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "General Sans", system-ui, sans-serif;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: oklch(0.136 0.012 244);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.275 0.022 244);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.35 0.022 244);
+  }
+}
+
+@layer utilities {
+  .glow-accent {
+    box-shadow: 0 0 12px oklch(0.779 0.133 184 / 0.3);
+  }
+  .glow-primary {
+    box-shadow: 0 0 12px oklch(0.713 0.143 159 / 0.3);
+  }
+  .glow-destructive {
+    box-shadow: 0 0 12px oklch(0.469 0.101 22 / 0.3);
+  }
+  .grid-overlay {
+    background-image: linear-gradient(oklch(1 0 0 / 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(1 0 0 / 0.12) 1px, transparent 1px);
+    background-size: 33.333% 33.333%;
+  }
+}

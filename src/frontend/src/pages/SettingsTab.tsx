@@ -55,6 +55,7 @@ import {
   useSavePreset,
   useSaveUserSettings,
 } from "../hooks/useQueries";
+import { buildVideoStyle } from "../lib/cameraStyle";
 
 function SettingRow({
   label,
@@ -290,11 +291,7 @@ export default function SettingsTab() {
     startPreview(settings.deviceId, res);
   };
 
-  const previewStyle: React.CSSProperties = {
-    transform:
-      `${settings.flip ? "scaleY(-1)" : ""} ${settings.mirror ? "scaleX(-1)" : ""}`.trim() ||
-      undefined,
-  };
+  const previewStyle = buildVideoStyle(settings);
 
   return (
     <div className="space-y-6">

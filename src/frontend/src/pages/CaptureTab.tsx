@@ -19,6 +19,7 @@ import {
   RESOLUTION_MAP,
   useCameraSettings,
 } from "../contexts/CameraSettingsContext";
+import { buildCanvasFilter, buildVideoStyle } from "../lib/cameraStyle";
 import { downloadBlob, encodeFramesToVideo } from "../lib/videoEncoder";
 
 type RateMode = "fps" | "fpm" | "interval";
@@ -134,14 +135,52 @@ export default function CaptureTab() {
     canvas.height = video.videoHeight || 720;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    if (settings.mirror) {
-      ctx.save();
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, -canvas.width, 0);
-      ctx.restore();
+
+    const filterStr = buildCanvasFilter(settings);
+    ctx.filter = filterStr;
+
+    ctx.save();
+
+    const zoom = settings.zoom > 1 ? settings.zoom : 1;
+    const srcW = video.videoWidth / zoom;
+    const srcH = video.videoHeight / zoom;
+    const srcX = (video.videoWidth - srcW) / 2;
+    const srcY = (video.videoHeight - srcH) / 2;
+
+    if (settings.mirror || settings.flip) {
+      ctx.translate(
+        settings.mirror ? canvas.width : 0,
+        settings.flip ? canvas.height : 0,
+      );
+      ctx.scale(settings.mirror ? -1 : 1, settings.flip ? -1 : 1);
+      ctx.drawImage(
+        video,
+        srcX,
+        srcY,
+        srcW,
+        srcH,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
     } else {
-      ctx.drawImage(video, 0, 0);
+      ctx.drawImage(
+        video,
+        srcX,
+        srcY,
+        srcW,
+        srcH,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
     }
+
+    ctx.restore();
+    ctx.filter = "none";
+
     return new Promise<Blob | null>((resolve) => {
       canvas.toBlob(
         (b) => resolve(b),
@@ -149,7 +188,7 @@ export default function CaptureTab() {
         settings.imageQuality / 100,
       );
     });
-  }, [settings.mirror, settings.imageQuality]);
+  }, [settings]);
 
   const stopCapture = useCallback(
     async (reason = "manual") => {
@@ -521,7 +560,7 @@ export default function CaptureTab() {
               ref={videoRef}
               className="w-full h-full object-cover"
               style={{
-                transform: `${settings.flip ? "scaleY(-1)" : ""} ${settings.mirror ? "scaleX(-1)" : ""}`,
+                ...buildVideoStyle(settings),
                 minHeight: 280,
                 maxHeight: 420,
                 display: "block",

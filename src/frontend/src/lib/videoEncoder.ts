@@ -40,14 +40,30 @@ export async function encodeFramesToVideo(
   canvas.height = firstImg.naturalHeight || 720;
   const ctx = canvas.getContext("2d")!;
 
-  // Use a high fps stream but draw each frame for multiple ticks if fps < 1
+  // Guard: captureStream not supported (e.g. Safari iOS)
+  if (typeof (canvas as any).captureStream === "undefined") {
+    throw new Error("Video capture not supported in this browser");
+  }
+
   const recordFps = Math.max(1, Math.ceil(fps));
-  const stream = canvas.captureStream(recordFps);
+  const stream = (canvas as any).captureStream(recordFps) as MediaStream;
   const recorder = new MediaRecorder(stream, { mimeType });
   const chunks: Blob[] = [];
+
   recorder.ondataavailable = (e) => {
-    if (e.data.size > 0) chunks.push(e.data);
+    if (e.data && e.data.size > 0) chunks.push(e.data);
   };
+
+  // Promise that resolves only in onstop -- by then all ondataavailable have fired
+  const recordingDone = new Promise<void>((resolve, reject) => {
+    recorder.onstop = () => resolve();
+    recorder.onerror = (e) =>
+      reject(
+        new Error(
+          `MediaRecorder error: ${(e as any).error?.message ?? String(e)}`,
+        ),
+      );
+  });
 
   recorder.start(100);
 
@@ -67,12 +83,21 @@ export async function encodeFramesToVideo(
     await new Promise((r) => setTimeout(r, Math.max(50, frameInterval)));
   }
 
+  // Flush any buffered data before stopping
+  recorder.requestData();
   recorder.stop();
-  await new Promise<void>((resolve) => {
-    recorder.onstop = () => resolve();
-  });
+
+  // Wait for onstop -- guarantees all ondataavailable events have already fired
+  await recordingDone;
+
+  if (opts.onProgress) opts.onProgress(100);
 
   const blob = new Blob(chunks, { type: mimeType });
+
+  if (blob.size === 0) {
+    throw new Error("Encoded video is empty -- try capturing more frames");
+  }
+
   return { blob, mimeType };
 }
 

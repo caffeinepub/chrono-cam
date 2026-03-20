@@ -418,6 +418,7 @@ export default function SettingsTab() {
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const justResetRef = useRef(false);
   const autoSwitchBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -441,6 +442,10 @@ export default function SettingsTab() {
   // Load saved settings from backend
   useEffect(() => {
     if (savedSettings) {
+      if (justResetRef.current) {
+        justResetRef.current = false;
+        return;
+      }
       setSettings(toUISettings(savedSettings));
     }
   }, [savedSettings, setSettings]);
@@ -775,6 +780,7 @@ export default function SettingsTab() {
       return;
     }
     try {
+      justResetRef.current = true;
       await resetSettings();
       setSettings(DEFAULT_SETTINGS);
       toast.success("Settings reset to defaults");
